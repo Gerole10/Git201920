@@ -1,5 +1,3 @@
-# Git201920
-Repositorio proyecto sistemas distribuidos 2019-2020
-Componentes del grupo del proyecto:
-  José Otero Aguado
-  Germán Rolando León
+https://github.com/Gerole10/Git201920/
+Germán Rolando León
+José Otero Aguado
