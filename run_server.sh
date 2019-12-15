@@ -1,22 +1,24 @@
 #!/bin/sh
+#
 
+PYTHON=python3
 
+DOWNLOADER_CONFIG=server.config
+ORCHESTRATOR_CONFIG=$DOWNLOADER_CONFIG
 
-rm -r IceStorm/
-mkdir -p IceStorm/
+./run_icestorm.sh &
 
-echo "Run icebox"
-sudo icebox --Ice.Config=icebox.config &
+PRX=$(tempfile)
+$PYTHON downloader.py --Ice.Config=$DOWNLOADER_CONFIG>$PRX &
+PID=$!
 
-sleep 2
-echo "Run downloaders"
-./downloader.py --Ice.Config=dw.config | tee proxydw.out &
+# Dejamos arrancar al downloader
+sleep 1
+echo "Downloader: $(cat $PRX)"
 
-sleep 2
+# Lanzamos el orchestrator
+$PYTHON orchestrator.py --Ice.Config=$ORCHESTRATOR_CONFIG "$(cat $PRX)"
 
-echo "Run orchestrators"
-./orchestrator.py --Ice.Config=orc.config "$(head -1 proxydw.out)" &
-
-sleep 2
-
-./orchestrator.py --Ice.Config=orc.config "$(head -1 proxydw.out)"
+echo "Shoutting down..."
+kill -KILL $PID
+rm $PRX

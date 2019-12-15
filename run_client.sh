@@ -1,5 +1,17 @@
 #!/bin/sh
+#
 
-echo "Iniciar cliente"
+PYTHON=python3
 
-./client.py "$1" "$2"
+CLIENT_CONFIG=server.config
+
+if [ $# -lt 2 ]; then
+  $PYTHON client.py --Ice.Config=$CLIENT_CONFIG "$1"
+   exit 0
+fi
+
+if [ $# -eq 2 ]; then
+  $PYTHON client.py --Ice.Config=$CLIENT_CONFIG "$1" "$2"
+fi
+
+

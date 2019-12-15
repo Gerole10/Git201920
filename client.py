@@ -1,26 +1,49 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-''' Implementacion del cliente '''
+# -*- coding: utf-8; -*-
+'''
+Implementacion cliente
+'''
 
 import sys
-import Ice # pylint: disable=E0401, C0413
+import Ice # pylint: disable=E0401,E0401
 Ice.loadSlice('trawlnet.ice')
-import TrawlNet # pylint: disable=E0401, C0413
-
+import TrawlNet # pylint: disable=E0401,C0413
 
 class Client(Ice.Application):
-    ''' Cliente '''
+    '''
+    Clase cliente
+    '''
+
 
     def run(self, argv):
-        ''' Aplicacion de Ice '''
-        proxyorc = self.communicator().stringToProxy(argv[1])
-        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxyorc)
+        ''' Run '''
+        proxy = self.communicator().stringToProxy(argv[1])
+        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
         if not orchestrator:
-            raise RuntimeError('Error')
+            raise RuntimeError("Invalid proxy")
 
-        message = orchestrator.downloadTask(argv[2])
-        print("Respuesta recibida", message)
-        return 0
+        if len(argv) == 2:
+            print(orchestrator.getFileList())
+            sys.exit
+        
+        
+        
+        if len(argv) == 3:
+            if not argv[2]:
+                raise RuntimeError("Error en la URL")
+            if self.is_good_url(argv[2]):
+                print(orchestrator.downloadTask(argv[2]))
+
+    def is_good_url(self, url, current=None):
+        import re
+        regex = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        return regex.search(url)
+
 
 sys.exit(Client().main(sys.argv))
