@@ -1,7 +1,6 @@
- #!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
 
-import re
 import sys
 import Ice # pylint: disable=E0401
 import IceStorm
@@ -16,11 +15,11 @@ class Server(Ice.Application):  #pylint: disable=R0903
         '''
         Init
         '''
-        key = 'IceStorm.TopicManager.Proxy'
+        key = 'YoutubeDownloaderApp.IceStorm/TopicManager'
         topic_name_file = "UpdateEvents"
         topic_name_orchestrator = "OrchestratorSync"
         broker = self.communicator()
-        proxy = broker.propertyToProxy(key)
+        proxy = broker.stringToProxy(key)
         if proxy is None:
             return None
         topic_mgr = IceStorm.TopicManagerPrx.checkedCast(proxy) # pylint: disable=E1101
@@ -37,7 +36,7 @@ class Server(Ice.Application):  #pylint: disable=R0903
         except IceStorm.NoSuchTopic: # pylint: disable=E1101
             topic_orchestrator = topic_mgr.create(topic_name_orchestrator)
 
-        IniciarOrchestrator(broker, argv[1], topic_update, topic_orchestrator)
+        IniciarOrchestrator(broker, topic_update, topic_orchestrator)
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
         return 0
@@ -76,6 +75,10 @@ class OrchestratorI(TrawlNet.Orchestrator):
             return self.orchestrator.obtener_lista_canciones()
         return []
 
+    def getFile(self, name, current=None):
+        if self.orchestrator:
+            return self.orchestrator.obtener_lista(name)
+
 
 class FileUpdatesEventI(TrawlNet.UpdateEvent):
     '''
@@ -100,18 +103,22 @@ class IniciarOrchestrator:
     orchestrators_dict = {}
     files_update = {}
 
-    def __init__(self, broker, downloader_proxy, topic_update, topic_orchestrator):
-        ''' Constructor '''
+    def __init__(self, broker, topic_update, topic_orchestrator):
+        ''' Constructor de la clase '''
         self.adapter = broker.createObjectAdapter("OrchestratorAdapter")
-        self.crear_orchestrator(broker, downloader_proxy, topic_update, topic_orchestrator)
-        self.downloader = TrawlNet.DownloaderPrx.checkedCast(broker.stringToProxy(downloader_proxy))
+        self.crear_orchestrator(broker, topic_update, topic_orchestrator)
+        identity = broker.propertyToProxy("DownloaderFactoryIdentity")
+        self.downloader_factory = TrawlNet.DownloaderFactoryPrx.checkedCast(identity)
+        self.downloader = self.downloader_factory.create()
+        trans_identity = broker.propertyToProxy("TransferFactoryIdentity")
+        self.transfer = TrawlNet.TransferFactoryPrx.checkedCast(trans_identity)
         self.topic_orchestrator = topic_orchestrator
         self.file_topic = topic_update
         self.crear_orchestrator_event()
         self.crear_file_update_event()
-        self.lanzar()
+        self.start_orchestrator()
 
-    def crear_orchestrator(self, broker, downloader_proxy, topic_update, topic_orchestrator):
+    def crear_orchestrator(self, broker, topic_update, topic_orchestrator):
         ''' Crear orchestrator'''
         self.orchestrator = OrchestratorI()
         self.orchestrator.orchestrator = self
@@ -144,14 +151,18 @@ class IniciarOrchestrator:
         ''' envio downloadTask '''
         return self.downloader.addDownloadTask(url)
 
+    def obtener_lista(self, name):
+        ''' obtener_lista '''
+        return self.transfer.create(name)
+
     def nuevo_orchestrator(self, orchestrator):
         if orchestrator.ice_toString() in self.orchestrators_dict:
             return
         print("Hola! yo soy %s" % orchestrator.ice_toString())
         self.orchestrators_dict[orchestrator.ice_toString()] = orchestrator
 
-    def lanzar(self):
-        ''' Activar adaptador y lanzar hello orchestrator '''
+    def start_orchestrator(self):
+        ''' Activar adaptador '''
         self.adapter.activate()
         self.publisher.hello(TrawlNet.OrchestratorPrx.checkedCast(self.proxy_orchestrator))
 
@@ -164,10 +175,6 @@ class IniciarOrchestrator:
             file_info_object.name = self.files_update[fhash]
             file_list.append(file_info_object)
         return file_list
-
-    def __str__(self):
-        ''' to str '''
-        return str(self.proxy_subscriptor)
 
 
 SERVER = Server()

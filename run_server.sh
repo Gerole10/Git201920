@@ -2,9 +2,10 @@
 #
 
 echo "Creating directories in /tmp..."
-mkdir -p /tmp/YoutubeDownloaderApp
-cp trawlnet.ice orchestrator.py downloader_factory.py transfer_factory.py \
-utils.py /tmp/YoutubeDownloaderApp
+mkdir -p /tmp/YoutubeDownloaderApp/downloads
+mkdir ./downloads/
+cp trawlnet.ice orchestrator.py download.py downloader_factory.py transfer_factory.py \
+/tmp/YoutubeDownloaderApp
 echo "Exec icepatch2calc..."
 icepatch2calc /tmp/YoutubeDownloaderApp
 
